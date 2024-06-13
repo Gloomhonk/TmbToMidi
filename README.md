@@ -49,9 +49,9 @@ Some information is lost during the conversion process from MIDI to TMB, so when
 Licensed under the [MIT License](https://github.com/Gloomhonk/TmbToMidi?tab=MIT-1-ov-file).
 
 External libraries used:\
-[DryWetMidi](https://github.com/melanchall/drywetmidi) is licensed under the [MIT License](https://github.com/melanchall/drywetmidi?tab=MIT-1-ov-file)\
-[JSON.NET](https://github.com/JamesNK/Newtonsoft.Json) is licensed under the [MIT License](https://github.com/JamesNK/Newtonsoft.Json?tab=MIT-1-ov-file)\
-[NLog](https://github.com/NLog/NLog) is licensed under the [BSD 3-Clause License](https://github.com/NLog/NLog?tab=BSD-3-Clause-1-ov-file).\
+[DryWetMidi](https://github.com/melanchall/drywetmidi) is licensed under the [MIT License](https://github.com/melanchall/drywetmidi?tab=MIT-1-ov-file).\
+[JSON.NET](https://github.com/JamesNK/Newtonsoft.Json) is licensed under the [MIT License](https://github.com/JamesNK/Newtonsoft.Json?tab=MIT-1-ov-file).\
+[NLog](https://github.com/NLog/NLog) is licensed under the [BSD 3-Clause License](https://github.com/NLog/NLog?tab=BSD-3-Clause-1-ov-file).
 
 
 
