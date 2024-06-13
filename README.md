@@ -20,7 +20,7 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 <a id="features"></a>
 ## Features
 
-- Slides are converted using the TCCC format ([TCCC link](https://tc-chart-converter.github.io/)), so a single slide will consist of two overlapping notes going from the start of the first note to the end of the second note.
+- Slides are converted using the [TCCC](https://tc-chart-converter.github.io/) format, so a single slide will consist of two overlapping notes going from the start of the first note to the end of the second note.
 - Lyrics are added to the MIDI as Lyrics MIDI events.
 - Improv zones are added to the MIDI as text events with the format **improv_start** and **improv_end**.
 - Background events are added to the MIDI as text events with the format **bg_[eventid]**.
@@ -50,7 +50,9 @@ Licensed under the [MIT License].
 
 External libraries used:
 [DryWetMidi](https://github.com/melanchall/drywetmidi) is licensed under the [MIT License](https://github.com/melanchall/drywetmidi?tab=MIT-1-ov-file)
+
 [JSON.NET](https://github.com/JamesNK/Newtonsoft.Json) is licensed under the [MIT License](https://github.com/JamesNK/Newtonsoft.Json?tab=MIT-1-ov-file)
+
 [NLog](https://github.com/NLog/NLog) is licensed under the [BSD 3-Clause License](https://github.com/NLog/NLog?tab=BSD-3-Clause-1-ov-file).
 
 
