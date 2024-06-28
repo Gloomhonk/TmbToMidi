@@ -43,7 +43,7 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 
 ### Conversion Limitations
 Some information is lost during the conversion process from MIDI to TMB, so when reversing this process there will be some internal differences:
-- Slide end notes won't match the length of the original MIDI.
+- Slide end notes will be a different size, although the end point will be the same.
 - If the original MIDI contained tempo change events they will not be present (notes are in the post-tempo shifted positions).
 - The exact time and frequency of pitch bend events will differ.
 - If the original MIDI used separate channels for different events then this will not be preserved.
