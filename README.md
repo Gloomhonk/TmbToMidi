@@ -1,5 +1,5 @@
 # TMBToMIDI
-Converts Trombone Champ custom charts (.tmb files) into MIDI.
+Library and standalone app that converts Trombone Champ custom charts (.tmb files) into MIDI.
 
  **Contents**
 - [How To Use](#how-to-use)
@@ -9,13 +9,15 @@ Converts Trombone Champ custom charts (.tmb files) into MIDI.
 <a id="how-to-use"></a>
 ## How To Use
 
+![MainWindow](https://github.com/Gloomhonk/TmbToMidi/assets/135999125/92c8cb6f-4fd6-49a0-8101-c0be3d4cac94)
+
 1. Download the latest release.
 2. Unzip and run TmbToMidiGUI.exe.
 3. Click **Load TMB** to open the file dialog and choose a .tmb file to load.
 	* If successful, you should see the song information appear in the main window.
 4. Click **Generate MIDI** and choose a location to save the MIDI file.
 
-If you have any questions or issues then feel free to ask the [Trombone Champ Modding discord](https://discord.gg/KVzKRsbetJ). If asked for a log file, this can be found in your app folder.
+If you have any questions or issues then feel free to ask the [Trombone Champ Modding discord](https://discord.gg/KVzKRsbetJ). Log files can be found in the app's folder.
 
 <a id="features"></a>
 ## Features
@@ -25,9 +27,10 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 - Improv zones are added to the MIDI as text events with the format **improv_start** and **improv_end**.
 - Background events are added to the MIDI as text events with the format **bg_[eventid]**.
 - MIDI tempo is set to the given tempo in the chart metadata.
+- Notes containing microtones will have pitch bend events added to adjust relevant MIDI notes.
+	* The MIDI pitch bend range can be controlled via the Settings window.
 
 ### Planned Features
-- Support for converting microtones into MIDI pitch bend events.
 - Support for customizing length of slide end notes.
 
 <a id="additional-info"></a>
@@ -40,7 +43,7 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 
 ### Conversion Limitations
 Some information is lost during the conversion process from MIDI to TMB, so when reversing this process there will be some internal differences:
-- Slide end notes won't match the length of the original MIDI.
+- Slide end notes will be a different size, although the end point will be the same.
 - If the original MIDI contained tempo change events they will not be present (notes are in the post-tempo shifted positions).
 - The exact time and frequency of pitch bend events will differ.
 - If the original MIDI used separate channels for different events then this will not be preserved.
