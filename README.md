@@ -17,7 +17,7 @@ Converts Trombone Champ custom charts (.tmb files) into MIDI.
 	* If successful, you should see the song information appear in the main window.
 4. Click **Generate MIDI** and choose a location to save the MIDI file.
 
-If you have any questions or issues then feel free to ask the [Trombone Champ Modding discord](https://discord.gg/KVzKRsbetJ). If asked for a log file, this can be found in your app folder.
+If you have any questions or issues then feel free to ask the [Trombone Champ Modding discord](https://discord.gg/KVzKRsbetJ). Log files can be found in the app's folder.
 
 <a id="features"></a>
 ## Features
