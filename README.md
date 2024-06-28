@@ -1,5 +1,5 @@
 # TMBToMIDI
-Converts Trombone Champ custom charts (.tmb files) into MIDI.
+Library and standalone app that converts Trombone Champ custom charts (.tmb files) into MIDI.
 
  **Contents**
 - [How To Use](#how-to-use)
