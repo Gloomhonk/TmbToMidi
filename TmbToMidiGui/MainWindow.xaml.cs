@@ -25,10 +25,6 @@ namespace TmbToMidiGui
 
 			this.Closing += OnMainWindowClosing;
 		}
-		private void TEST()
-		{
-
-		}
 
 		private void LoadTmb_Click(object sender, RoutedEventArgs e)
 		{
