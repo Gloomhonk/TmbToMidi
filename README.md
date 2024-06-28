@@ -37,7 +37,7 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 ## Additional Info
 
 ### MIDI Info
-- Uses a resolution of 960 ticks per quarter note for conversion (this is same value as TCCC and the default for DAWs such as Reaper and Logic).
+- Uses a resolution of 960 ticks per quarter note for conversion (this is the same value as TCCC and the default for DAWs such as Reaper and Logic).
 - Note On events are added with 100 velocity, Note Off events are added with 0 velocity.
 - All events are added to MIDI Channel 1.
 
