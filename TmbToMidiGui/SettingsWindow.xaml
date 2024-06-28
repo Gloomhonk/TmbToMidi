@@ -1,0 +1,19 @@
+﻿<Window x:Class="TmbToMidiGUI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TmbToMidiGUI"
+        mc:Ignorable="d"
+        Title="TmbToMidi - Settings" Height="100" Width="250"
+		Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+	<Grid>
+		<StackPanel Margin="10,10">
+			<TextBlock Name="PitchBendTextBlock" FontSize="13" Margin="0, 2, 0, 2" Text="Pitch Bend Range"/>
+			<DockPanel VerticalAlignment="Center" Margin="0">
+				<TextBox Text="{Binding ElementName=PitchBendRangeValue, Path=Value, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Right" TextAlignment="Right" Width="40" />
+				<Slider Minimum="1" Maximum="12" TickPlacement="BottomRight" TickFrequency="1" IsSnapToTickEnabled="True" Name="PitchBendRangeValue" ValueChanged="PitchBendSlider_ValueChanged" />
+			</DockPanel>
+		</StackPanel>
+	</Grid>
+</Window>

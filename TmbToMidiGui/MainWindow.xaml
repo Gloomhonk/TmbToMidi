@@ -8,40 +8,26 @@
         Title="TMBtoMIDI" Height="250" Width="400"
 		Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
 	<Grid>
-		<StackPanel Margin="10">
-			<WrapPanel Margin="5, 2, 5, 8">
+		<StackPanel Margin="15,10">
+			<WrapPanel Margin="0, 2, 5, 8">
 				<Button Click="LoadTmb_Click">
-					<WrapPanel Margin="3, 0, 3, 0">
-						<TextBlock>Load TMB</TextBlock>
-					</WrapPanel>
+					<TextBlock Margin="3, 0, 3, 0">Load TMB</TextBlock>
 				</Button>
 			</WrapPanel>
 
-			<WrapPanel Margin="5, 2, 0, 4">
-				<TextBlock Name="ChartInfoTextBlock" FontSize="18" Text="Chart Info" FontWeight="Bold" />
-			</WrapPanel>
+			<TextBlock Name="ChartInfoTextBlock" FontSize="18" Margin="0, 2, 0, 4" Text="Chart Info" FontWeight="Bold" />
+			<TextBlock Name="TrackrefTextBlock" FontSize="13" Margin="0, 2, 0, 2" Text="Trackref: "/>
+			<TextBlock Name="NameTextBlock" FontSize="13" Margin="0, 2, 0, 2" Text="Name: " />
+			<TextBlock Name="ShortNameTextBlock" FontSize="13" Margin="0, 2, 0, 2" Text="Short Name: " />
+			<TextBlock Name="TempoTextBlock" FontSize="13" Margin="0, 2, 0, 2" Text="Tempo: "/>
 
-			<WrapPanel Margin="5, 2, 0, 2">
-				<TextBox Name="TrackrefTextBlock" FontSize="13" Background="Transparent" BorderThickness="0" Text="Trackref: " IsReadOnly="True" TextWrapping="Wrap" />
-			</WrapPanel>
-
-			<WrapPanel Margin="5, 2, 0, 2">
-				<TextBox Name="NameTextBlock" FontSize="13" Background="Transparent" BorderThickness="0" Text="Name: " IsReadOnly="True" TextWrapping="Wrap" />
-			</WrapPanel>
-
-			<WrapPanel Margin="5, 2, 0, 2">
-				<TextBox Name="ShortNameTextBlock" FontSize="13" Background="Transparent" BorderThickness="0" Text="Short Name: " IsReadOnly="True" TextWrapping="Wrap" />
-			</WrapPanel>
-
-			<WrapPanel Margin="5, 2, 0, 2">
-				<TextBox Name="TempoTextBlock" FontSize="13" Background="Transparent" BorderThickness="0" Text="Tempo: " IsReadOnly="True" TextWrapping="Wrap" />
-			</WrapPanel>
-
-			<WrapPanel Margin="5, 12, 5, 8">
+			<WrapPanel Margin="0, 12, 5, 8">
 				<Button Name="ButtonGenerate" Click="GenerateMidi_Click">
-					<WrapPanel Margin="3, 0, 3, 0">
-						<TextBlock>Generate MIDI</TextBlock>
-					</WrapPanel>
+					<TextBlock Margin="3, 0, 3, 0">Generate MIDI</TextBlock>
+				</Button>
+
+				<Button Name="Settings" Click="Settings_Click" Margin="6, 0, 3, 0">
+					<TextBlock Margin="3, 0, 3, 0">Settings</TextBlock>
 				</Button>
 			</WrapPanel>
 

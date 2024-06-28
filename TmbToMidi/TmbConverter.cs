@@ -11,8 +11,24 @@ namespace TmbToMidi
 {
 	public static class TmbConverter
 	{
+		private enum NoteEventTypes
+		{
+			NoteOn = 0,
+			NoteOff = 1
+		}
+
+		private class InternalNoteEvent
+		{
+			public NoteEventTypes EventType;
+			public long TimeTicks;
+			public int Pitch;
+			public int PitchBend;
+		}
+
 		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 		private const float PitchUnitsPerSemitone = 13.75f;
+		private const int MidiPitchBendMaxValue = 8192;
+		private const int DefaultMidiNotePitch = 60;
 
 		/// <summary>
 		/// Attempts to load the given filename and retrieve the TMB song data.
@@ -26,17 +42,17 @@ namespace TmbToMidi
 		/// <summary>
 		/// Converts the given TMB song data to MIDI and writes to the given file path.
 		/// </summary>
-		public static void ConvertAndWriteToMidi(TmbData songData, string filename)
+		public static void ConvertAndWriteToMidi(TmbData songData, string filename, TmbConverterSettings settings)
 		{
 			//MIDI tempo is in microseconds per beat.
-			long midiTempo = (long)Math.Round((60.0f / songData.tempo) * 1000000); 
+			long midiTempo = (long)Math.Round((60.0f / songData.tempo) * 1000000);
 			//long midiTempo120bpm = 500000;
 
 			TicksPerQuarterNoteTimeDivision timeDivision = new TicksPerQuarterNoteTimeDivision(960);
 
 			List<TrackChunk> trackChunks = new List<TrackChunk>();
 			trackChunks.Add(new TrackChunk(new SetTempoEvent(midiTempo)));
-			trackChunks.AddRange(ConvertNotes(songData, timeDivision.TicksPerQuarterNote));
+			trackChunks.AddRange(ConvertNotes(songData, timeDivision.TicksPerQuarterNote, settings));
 			trackChunks.Add(ConvertImprovZones(songData, timeDivision.TicksPerQuarterNote));
 			trackChunks.Add(ConvertLyrics(songData, timeDivision.TicksPerQuarterNote));
 			trackChunks.Add(ConvertBackgroundEvents(songData, timeDivision.TicksPerQuarterNote));
@@ -50,105 +66,140 @@ namespace TmbToMidi
 			midiFile.Write(filename, true, MidiFileFormat.SingleTrack);
 		}
 
-		private static List<TrackChunk> ConvertNotes(TmbData songData, short timeDivisionTicks)
+		private static List<TrackChunk> ConvertNotes(TmbData songData, short timeDivisionTicks, TmbConverterSettings settings)
 		{
 			//Lowest TC note = B2 = 47. Top note = C#5 = 73. C4 = 0 units (60).
-			Log.Info("Converting notes, total = {0}", songData.notes.Length);
+			Log.Info("Converting notes: total = {0}, pitch bend range = {1}", songData.notes.Length, settings.PitchBendRange);
 			List<TrackChunk> noteChunks = new List<TrackChunk>();
-
+			List<float[]> remainingNotes = new List<float[]>(songData.notes);
 			int currentPass = 0;
 			int maxNumPasses = 1000;
-			List<float[]> remainingNotes = new List<float[]>(songData.notes);
 
-			//It's possible for notes to overlap in chart data, so perform multiple passes
-			//to split any overlapping notes across separate TrackChunks.
+			//It's possible for notes to overlap, so do multiple passes to process overlapping notes in separate TrackChunks.
 			while (remainingNotes.Count > 0 && currentPass < maxNumPasses)
 			{
 				Log.Info("Note pass {0}", currentPass);
 				List<NoteEvent> noteEvents = new List<NoteEvent>();
+				List<PitchBendEvent> pitchBendEvents = new List<PitchBendEvent>();
 				long lastEventTicks = 0;
+				long lastPitchBendTicks = 0;
+				int lastEndPitchBend = 0;
+				int lastEndPitch = 0;
 				int i = 0;
 
 				while (i < remainingNotes.Count)
 				{
-					float[] currentNote = remainingNotes[i];
-					long startTicks = (long)Math.Round(currentNote[0] * timeDivisionTicks);
-					long endTicks = (long)Math.Round((currentNote[0] + currentNote[1]) * timeDivisionTicks);
-					//TODO - Need to support microtonal adjustments (this is rounding notes to the nearest whole note).
-					int startPitch = (int)Math.Round(currentNote[2] / PitchUnitsPerSemitone) + 60;
-					int endPitch = (int)Math.Round(currentNote[4] / PitchUnitsPerSemitone) + 60;
-
-					Log.Debug("Note start time = {0}({1} ticks) start pitch = {2} end time = {3}({4} ticks) end pitch = {5}",
-						currentNote[0], startTicks, startPitch, currentNote[0] + currentNote[1], endTicks, endPitch);
-
+					float[] note = remainingNotes[i];
+					long startTicks = (long)Math.Round(note[0] * timeDivisionTicks);
+					long endTicks = (long)Math.Round((note[0] + note[1]) * timeDivisionTicks);
 					long startDelta = startTicks - lastEventTicks;
+					long pitchBendDeltaTicks = startTicks - lastPitchBendTicks;
 
-					//Check for suspicious delta values.
+					Log.Debug("Note start: {0} end: {1} start pitch: {2} end pitch: {3}", note[0], note[0] + note[1], note[2], note[4]);
+
+					//Check for suspicious delta values:
+					// - Deltas of +/-1 (1ms at 120bpm) can be caused by floating point precision differences in the TMB.
+					// - Larger negative deltas are caused by overlapping notes, which should be ignored until the next pass.
 					if (Math.Abs(startDelta) == 1)
 					{
-						//A delta of 1 (1ms at 120bpm) can be caused by floating point precision issues in the TMB.
-						//Adjust the end of the previous note so it connects correctly to the current note.
-						Log.Warn("Note at beat {0} has a tiny delta ({1}). Adjusting previous note to connect to this one.",
-							currentNote[0], startDelta);
-						noteEvents.Last<NoteEvent>().DeltaTime += startDelta;
+						Log.Warn("Note at beat {0} has a delta = {1}. Adjusting previous note to connect to it.", note[0], startDelta);
+						noteEvents.Last().DeltaTime += startDelta;
+
+						//If a pitch bend event was aligned with the adjusted note then adjust it too.
+						if (pitchBendDeltaTicks == startDelta)
+						{
+							pitchBendEvents.Last().DeltaTime += pitchBendDeltaTicks;
+							pitchBendDeltaTicks = 0;
+						}
+
 						startDelta = 0;
 					}
 					else if (startDelta < 0)
 					{
-						//If an overlapping note is detected, don't process it and move on to the next note.
-						Log.Warn("Note at beat {0} has a negative delta ({1}). Leaving note until the next pass.",
-							currentNote[0], startDelta);
+						Log.Warn("Note at beat {0} has a negative delta ({1}). Leaving until the next pass.", note[0], startDelta);
 						i++;
 						continue;
 					}
 
+					//Calculate MIDI pitches.
+					ConvertPitchValue(note[2], settings.PitchBendRange, out int startPitch, out int startPitchBend);
+					ConvertPitchValue(note[4], settings.PitchBendRange, out int endPitch, out int endPitchBend);
+
+					//Warn if this note is joined to the previous note, but has a different pitch bend value.
+					if (startDelta == 0 && lastEndPitch == startPitch && startPitchBend - lastEndPitchBend != 0)
+					{
+						Log.Warn("Note at beat {0} is connected to previous note, but has a different pitch bend ({1}).",
+							note[0], startPitchBend);
+					}
+
+					Log.Debug("Converted note start: {0} end: {1} start pitch: {2} start bend: {3} end pitch: {4} end bend: {5}",
+						startTicks, endTicks, startPitch, startPitchBend, endPitch, endPitchBend);
+
+					//Add the events. Pitch bend events are added if:
+					// - This is the first pass (in other words, don't add pitch bends for overlapping notes).
+					// - The pitch bend value is different to the previous note.
 					if (startPitch == endPitch)
 					{
-						//Non-slide note: add a single note on/off pair for the duration of the note.
-						noteEvents.Add(new NoteOnEvent((SevenBitNumber)startPitch, (SevenBitNumber)100)
-						{
-							DeltaTime = startDelta
-						});
+						//Standard note: add a single note on/off pair for the duration of the note.
+						noteEvents.Add(CreateNoteOnEvent(startPitch, startDelta));
+						noteEvents.Add(CreateNoteOffEvent(endPitch, endTicks - startTicks));
 
-						noteEvents.Add(new NoteOffEvent((SevenBitNumber)endPitch, (SevenBitNumber)0)
+						if (currentPass == 0)
 						{
-							DeltaTime = endTicks - startTicks
-						});
+							if (startPitchBend != lastEndPitchBend)
+							{
+								pitchBendEvents.Add(CreatePitchBendEvent(lastEndPitchBend, pitchBendDeltaTicks));
+								pitchBendEvents.Add(CreatePitchBendEvent(startPitchBend, 0));
+								lastPitchBendTicks = startTicks;
+								pitchBendDeltaTicks = 0;
+							}
+
+							if (endPitchBend != startPitchBend)
+							{
+								pitchBendEvents.Add(CreatePitchBendEvent(endPitchBend, pitchBendDeltaTicks + endTicks - startTicks));
+								lastPitchBendTicks = endTicks;
+							}
+						}
 					}
 					else
 					{
-						//Slide note: add an extra note to represent the pitch delta in MIDI (using TCCC rules).
-						//The note will be the smaller of half the length of the main note or 1/8th of a beat.
-						long noteHalfTicks = (endTicks - startTicks) / 2;
-						long eighthBeatTicks = timeDivisionTicks / 8;
-						long deltaNoteLength = eighthBeatTicks < noteHalfTicks ? eighthBeatTicks : noteHalfTicks;
+						//Slide note: add an extra note to represent the slide in MIDI (using TCCC rules).
+						long slideNoteLength = GetSlideNoteLength(endTicks - startTicks, timeDivisionTicks);
+						long slideNoteStartDelta = endTicks - slideNoteLength - startTicks;
 
-						noteEvents.Add(new NoteOnEvent((SevenBitNumber)startPitch, (SevenBitNumber)100)
-						{
-							DeltaTime = startDelta
-						});
+						noteEvents.Add(CreateNoteOnEvent(startPitch, startDelta));
+						noteEvents.Add(CreateNoteOnEvent(endPitch, slideNoteStartDelta));
+						noteEvents.Add(CreateNoteOffEvent(startPitch, slideNoteLength));
+						noteEvents.Add(CreateNoteOffEvent(endPitch, 0));
 
-						noteEvents.Add(new NoteOnEvent((SevenBitNumber)endPitch, (SevenBitNumber)100)
+						if (currentPass == 0)
 						{
-							DeltaTime = endTicks - deltaNoteLength - startTicks
-						});
+							if (startPitchBend != lastEndPitchBend)
+							{
+								pitchBendEvents.Add(CreatePitchBendEvent(lastEndPitchBend, pitchBendDeltaTicks));
+								pitchBendEvents.Add(CreatePitchBendEvent(startPitchBend, 0));
+								lastPitchBendTicks = startTicks;
+								pitchBendDeltaTicks = 0;
+							}
 
-						noteEvents.Add(new NoteOffEvent((SevenBitNumber)startPitch, (SevenBitNumber)0)
-						{
-							DeltaTime = deltaNoteLength
-						});
-
-						noteEvents.Add(new NoteOffEvent((SevenBitNumber)endPitch, (SevenBitNumber)0)
-						{
-							DeltaTime = 0
-						});
+							if (endPitchBend != startPitchBend)
+							{
+								pitchBendEvents.Add(CreatePitchBendEvent(startPitchBend, pitchBendDeltaTicks + slideNoteStartDelta - 1));
+								pitchBendEvents.Add(CreatePitchBendEvent(endPitchBend, 1));
+								pitchBendEvents.Add(CreatePitchBendEvent(endPitchBend, slideNoteLength));
+								lastPitchBendTicks = endTicks;
+							}
+						}
 					}
 
 					lastEventTicks = endTicks;
+					lastEndPitch = endPitch;
+					lastEndPitchBend = endPitchBend;
 					remainingNotes.RemoveAt(i);
 				}
 
 				noteChunks.Add(new TrackChunk(noteEvents.ToArray()));
+				noteChunks.Add(new TrackChunk(pitchBendEvents.ToArray()));
 				currentPass++;
 
 				if (currentPass > maxNumPasses)
@@ -158,6 +209,60 @@ namespace TmbToMidi
 			}
 
 			return noteChunks;
+		}
+
+		private static NoteOnEvent CreateNoteOnEvent(int pitch, long deltaTime)
+		{
+			return new NoteOnEvent((SevenBitNumber)pitch, (SevenBitNumber)100)
+			{
+				DeltaTime = deltaTime
+			};
+		}
+
+		private static NoteOffEvent CreateNoteOffEvent(int pitch, long deltaTime)
+		{
+			return new NoteOffEvent((SevenBitNumber)pitch, (SevenBitNumber)0)
+			{
+				DeltaTime = deltaTime
+			};
+		}
+
+		private static PitchBendEvent CreatePitchBendEvent(int pitchBend, long deltaTime)
+		{
+			//MIDI requires pitch bend values in the range 0-16383.
+			return new PitchBendEvent((ushort)(pitchBend + MidiPitchBendMaxValue))
+			{
+				DeltaTime = deltaTime
+			};
+		}
+
+		/// <summary>
+		/// Converts a pitch value from in-game units to a MIDI whole note value plus pitch bend (if required).
+		/// </summary>
+		private static void ConvertPitchValue(float tmbPitch, int pitchBendRange, out int pitchWholeNote, out int pitchBend)
+		{
+			float exactPitch = (tmbPitch / PitchUnitsPerSemitone) + DefaultMidiNotePitch;
+			pitchWholeNote = (int)Math.Round(exactPitch);
+
+			//Pitch bend = value between -8192 and 8192, where 0 = no pitch bend.
+			pitchBend = (int)Math.Round(((exactPitch - pitchWholeNote) / pitchBendRange) * MidiPitchBendMaxValue);
+
+			//A pitch bend of 1 (0.02 cents on default settings) is likely to be a floating point precision issue.
+			if (Math.Abs(pitchBend) == 1)
+			{
+				pitchBend = 0;
+			}
+		}
+
+		private static long GetSlideNoteLength(long parentNoteLength, short timeDivisionTicks)
+		{
+			//Slide end notes are set to whichever is smaller:
+			//- An eighth of a beat.
+			//- Half the size of the parent note.
+			//TODO: Allow this to be customized?
+			long noteHalfTicks = parentNoteLength / 2;
+			long eighthBeatTicks = timeDivisionTicks / 8;
+			return eighthBeatTicks < noteHalfTicks ? eighthBeatTicks : noteHalfTicks;
 		}
 
 		private static TrackChunk ConvertImprovZones(TmbData songData, short timeDivisionTicks)
@@ -190,7 +295,7 @@ namespace TmbToMidi
 				}
 			}
 
-			return new TrackChunk(improvEvents);
+			return new TrackChunk(improvEvents.ToArray());
 		}
 
 		private static TrackChunk ConvertLyrics(TmbData songData, short timeDivisionTicks)
@@ -218,7 +323,7 @@ namespace TmbToMidi
 				}
 			}
 
-			return new TrackChunk(lyricEvents);
+			return new TrackChunk(lyricEvents.ToArray());
 		}
 
 		private static TrackChunk ConvertBackgroundEvents(TmbData songData, short timeDivisionTicks)
@@ -247,7 +352,7 @@ namespace TmbToMidi
 				}
 			}
 
-			return new TrackChunk(bgEvents);
+			return new TrackChunk(bgEvents.ToArray());
 		}
 	}
 }

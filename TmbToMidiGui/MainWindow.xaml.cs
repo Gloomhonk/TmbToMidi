@@ -1,7 +1,9 @@
 ﻿using NLog;
 using System;
+using System.ComponentModel;
 using System.Windows;
 using TmbToMidi;
+using TmbToMidiGUI;
 
 namespace TmbToMidiGui
 {
@@ -11,12 +13,21 @@ namespace TmbToMidiGui
 	public partial class MainWindow : Window
 	{
 		TmbData _songData;
+		TmbConverterSettings _settings;
+		SettingsWindow _settingsWindow;
 		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
 		public MainWindow()
 		{
 			InitializeComponent();
 			ButtonGenerate.IsEnabled = false;
+			_settings = new TmbConverterSettings();
+
+			this.Closing += OnMainWindowClosing;
+		}
+		private void TEST()
+		{
+
 		}
 
 		private void LoadTmb_Click(object sender, RoutedEventArgs e)
@@ -42,7 +53,7 @@ namespace TmbToMidiGui
 				{
 					Log.Error(ex, "Exception occurred when attempting to load file.");
 				}
-				
+
 				if (_songData != null)
 				{
 					Log.Info("File loaded: {0} ", filename);
@@ -83,7 +94,7 @@ namespace TmbToMidiGui
 
 			bool? result = dialog.ShowDialog();
 
-			if (result != true) 
+			if (result != true)
 			{
 				Log.Info("Failed to create filename.");
 				return;
@@ -91,18 +102,41 @@ namespace TmbToMidiGui
 
 			string filename = dialog.FileName;
 
-			Log.Info("Attempting to generate MIDI for trackref: {0} filename: {1}", _songData.trackref, filename);		
+			Log.Info("Attempting to generate MIDI for trackref: {0} filename: {1}", _songData.trackref, filename);
 
-			try 
+			try
 			{
-				TmbConverter.ConvertAndWriteToMidi(_songData, filename);
+				TmbConverter.ConvertAndWriteToMidi(_songData, filename, _settings);
 				Log.Info("MIDI generated. {0}", filename);
 				StatusMessageTextBox.Text = "MIDI generated!";
 			}
 			catch (Exception ex)
 			{
-				Log.Error(ex,"Failed to generate MIDI. {0}", filename);
+				Log.Error(ex, "Failed to generate MIDI. {0}", filename);
 				StatusMessageTextBox.Text = "Failed to generate MIDI, see log for more info.";
+			}
+		}
+
+		private void Settings_Click(object sender, RoutedEventArgs e)
+		{
+			if (_settingsWindow == null)
+			{
+				_settingsWindow = new SettingsWindow(_settings);
+				_settingsWindow.Closed += OnSettingsWindowClosed;
+				_settingsWindow.Show();
+			}
+		}
+
+		private void OnSettingsWindowClosed(object sender, EventArgs e)
+		{
+			_settingsWindow = null;
+		}
+
+		private void OnMainWindowClosing(object sender, CancelEventArgs e)
+		{
+			if (_settingsWindow != null)
+			{
+				_settingsWindow.Close();
 			}
 		}
 	}
