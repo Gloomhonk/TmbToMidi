@@ -11,20 +11,6 @@ namespace TmbToMidi
 {
 	public static class TmbConverter
 	{
-		private enum NoteEventTypes
-		{
-			NoteOn = 0,
-			NoteOff = 1
-		}
-
-		private class InternalNoteEvent
-		{
-			public NoteEventTypes EventType;
-			public long TimeTicks;
-			public int Pitch;
-			public int PitchBend;
-		}
-
 		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 		private const float PitchUnitsPerSemitone = 13.75f;
 		private const int MidiPitchBendMaxValue = 8192;
