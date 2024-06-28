@@ -9,6 +9,8 @@ Converts Trombone Champ custom charts (.tmb files) into MIDI.
 <a id="how-to-use"></a>
 ## How To Use
 
+![MainWindow](https://github.com/Gloomhonk/TmbToMidi/assets/135999125/92c8cb6f-4fd6-49a0-8101-c0be3d4cac94)
+
 1. Download the latest release.
 2. Unzip and run TmbToMidiGUI.exe.
 3. Click **Load TMB** to open the file dialog and choose a .tmb file to load.
@@ -25,9 +27,10 @@ If you have any questions or issues then feel free to ask the [Trombone Champ Mo
 - Improv zones are added to the MIDI as text events with the format **improv_start** and **improv_end**.
 - Background events are added to the MIDI as text events with the format **bg_[eventid]**.
 - MIDI tempo is set to the given tempo in the chart metadata.
+- Notes containing microtones will have pitch bend events added to adjust relevant MIDI notes.
+	* The MIDI pitch bend range can be controlled via the Settings window.
 
 ### Planned Features
-- Support for converting microtones into MIDI pitch bend events.
 - Support for customizing length of slide end notes.
 
 <a id="additional-info"></a>
