@@ -129,4 +129,11 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Melanchall.DryWetMidi.7.1.0\build\Melanchall.DryWetMidi.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Melanchall.DryWetMidi.7.1.0\build\Melanchall.DryWetMidi.targets'))" />
   </Target>
+  <!-- Moves all library files into a separate libs folder.-->
+  <Target Name="MoveDependenciesToSubfolder" AfterTargets="AfterBuild">
+  	<ItemGroup>
+      <DependencyFiles Include="$(TargetDir)*.dll;$(TargetDir)*.xml;$(TargetDir)*.pdb;$(TargetDir)*.dylib" Exclude="$(TargetDir)$(TargetName).dll;$(TargetDir)$(TargetName).exe" />
+  	</ItemGroup>
+  	<Move SourceFiles="@(DependencyFiles)" DestinationFolder="$(TargetDir)libs" OverwriteReadOnlyFiles="true" />
+  </Target>
 </Project>

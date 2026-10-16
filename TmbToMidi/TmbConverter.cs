@@ -80,15 +80,16 @@ namespace TmbToMidi
 					long endTicks = (long)Math.Round((note[0] + note[1]) * timeDivisionTicks);
 					long startDelta = startTicks - lastEventTicks;
 					long pitchBendDeltaTicks = startTicks - lastPitchBendTicks;
+					long noteLength = endTicks - startTicks;
 
-					Log.Debug("Note start: {0} end: {1} start pitch: {2} end pitch: {3}", note[0], note[0] + note[1], note[2], note[4]);
+					Log.Debug("Note start: {0} end: {1} start pitch: {2} end pitch: {3}", note[0].ToString("G9"), (note[0] + note[1]).ToString("G9"), note[2], note[4]);
 
 					//Check for suspicious delta values:
 					// - Deltas of +/-1 (1ms at 120bpm) can be caused by floating point precision differences in the TMB.
 					// - Larger negative deltas are caused by overlapping notes, which should be ignored until the next pass.
 					if (Math.Abs(startDelta) == 1)
 					{
-						Log.Warn("Note at beat {0} has a delta = {1}. Adjusting previous note to connect to it.", note[0], startDelta);
+						Log.Warn("Note at beat {0} has a midi tick of {1} from the previous note. Adjusting notes to connect to each other.", note[0].ToString("G9"), startDelta);
 						noteEvents.Last().DeltaTime += startDelta;
 
 						//If a pitch bend event was aligned with the adjusted note then adjust it too.
@@ -102,7 +103,7 @@ namespace TmbToMidi
 					}
 					else if (startDelta < 0)
 					{
-						Log.Warn("Note at beat {0} has a negative delta ({1}). Leaving until the next pass.", note[0], startDelta);
+						Log.Warn("Note at beat {0} has a negative midi tick from the previous event ({1}). Leaving until the next pass.", note[0].ToString("G9"), startDelta);
 						i++;
 						continue;
 					}
@@ -115,10 +116,10 @@ namespace TmbToMidi
 					if (startDelta == 0 && lastEndPitch == startPitch && startPitchBend - lastEndPitchBend != 0)
 					{
 						Log.Warn("Note at beat {0} is connected to previous note, but has a different pitch bend ({1}).",
-							note[0], startPitchBend);
+							note[0].ToString("G9"), startPitchBend);
 					}
 
-					Log.Debug("Converted note start: {0} end: {1} start pitch: {2} start bend: {3} end pitch: {4} end bend: {5}",
+					Log.Debug("Converted note, startTicks: {0} endTicks: {1} start pitch: {2} start bend: {3} end pitch: {4} end bend: {5}",
 						startTicks, endTicks, startPitch, startPitchBend, endPitch, endPitchBend);
 
 					//Add the events. Pitch bend events are added if:
@@ -128,7 +129,7 @@ namespace TmbToMidi
 					{
 						//Standard note: add a single note on/off pair for the duration of the note.
 						noteEvents.Add(CreateNoteOnEvent(startPitch, startDelta));
-						noteEvents.Add(CreateNoteOffEvent(endPitch, endTicks - startTicks));
+						noteEvents.Add(CreateNoteOffEvent(endPitch, noteLength));
 
 						if (currentPass == 0)
 						{
@@ -142,7 +143,7 @@ namespace TmbToMidi
 
 							if (endPitchBend != startPitchBend)
 							{
-								pitchBendEvents.Add(CreatePitchBendEvent(endPitchBend, pitchBendDeltaTicks + endTicks - startTicks));
+								pitchBendEvents.Add(CreatePitchBendEvent(endPitchBend, pitchBendDeltaTicks + noteLength));
 								lastPitchBendTicks = endTicks;
 							}
 						}
@@ -150,13 +151,18 @@ namespace TmbToMidi
 					else
 					{
 						//Slide note: add an extra note to represent the slide in MIDI (using TCCC rules).
-						long slideNoteLength = GetSlideNoteLength(endTicks - startTicks, timeDivisionTicks);
-						long slideNoteStartDelta = endTicks - slideNoteLength - startTicks;
-
+						//Notes are set to overlap, with the first note ending in the middle of the slide end note.
+						//This minimizes the chance of floating point precision errors in the TMB affecting the slide.
+						long slideNoteLength = GetSlideNoteLength(noteLength, timeDivisionTicks);
+						long firstNoteLength = noteLength - (slideNoteLength / 2);
+						long slideNoteStartDelta = noteLength - slideNoteLength;
+						long firstNoteEndDelta = slideNoteLength / 2;
+						long slideNoteEndDelta = noteLength - firstNoteLength;
+						
 						noteEvents.Add(CreateNoteOnEvent(startPitch, startDelta));
 						noteEvents.Add(CreateNoteOnEvent(endPitch, slideNoteStartDelta));
-						noteEvents.Add(CreateNoteOffEvent(startPitch, slideNoteLength));
-						noteEvents.Add(CreateNoteOffEvent(endPitch, 0));
+						noteEvents.Add(CreateNoteOffEvent(startPitch, firstNoteEndDelta));
+						noteEvents.Add(CreateNoteOffEvent(endPitch, slideNoteEndDelta));
 
 						if (currentPass == 0)
 						{
